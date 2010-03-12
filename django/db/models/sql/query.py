@@ -77,6 +77,7 @@ class Query(object):
 
     alias_prefix = 'T'
     query_terms = QUERY_TERMS
+    related_query_terms = RELATED_QUERY_TERMS
     aggregates_module = base_aggregates_module
 
     compiler = 'SQLCompiler'
@@ -952,8 +953,26 @@ class Query(object):
         if not parts:
             raise FieldError("Cannot parse keyword query %r" % arg)
 
+        # By restricting the query terms used for related fields, we prevent
+        # valid field names like "year" from being handled as lookup types
+        # when queries span relations.
+        try:
+            lookup_field = self.model._meta.get_field(parts[0])
+        except FieldDoesNotExist:
+            query_terms = self.query_terms
+        else:
+            # Do the import here to avoid a circular import.  If duck
+            # typing were used instead of an `isinstance` call, the import
+            # could be avoided.  I'm just not sure what test would be best for
+            # determining related-ness.
+            from django.db.models.fields.related import RelatedField
+            if isinstance(lookup_field, RelatedField):
+                query_terms = self.related_query_terms
+            else:
+                query_terms = self.query_terms
+
         # Work out the lookup type and remove it from 'parts', if necessary.
-        if len(parts) == 1 or parts[-1] not in self.query_terms:
+        if len(parts) == 1 or parts[-1] not in query_terms:
             lookup_type = 'exact'
         else:
             lookup_type = parts.pop()

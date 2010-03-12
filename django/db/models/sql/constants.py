@@ -7,6 +7,12 @@ QUERY_TERMS = dict([(x, None) for x in (
     'month', 'day', 'week_day', 'isnull', 'search', 'regex', 'iregex',
     )])
 
+# Valid query types for related fields.
+# See `django.db.models.fields.related.RelatedField.get_db_prep_lookup`.
+RELATED_QUERY_TERMS = dict([(x, None) for x in (
+    'exact', 'gt', 'lt', 'gte', 'lte', 'range', 'in', 'isnull'
+    )])
+
 # Size of each "chunk" for get_iterator calls.
 # Larger values are slightly faster at the expense of more storage space.
 GET_ITERATOR_CHUNK_SIZE = 100

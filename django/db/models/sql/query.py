@@ -953,29 +953,31 @@ class Query(object):
         if not parts:
             raise FieldError("Cannot parse keyword query %r" % arg)
 
-        # By restricting the query terms used for related fields, we prevent
-        # valid field names like "year" from being handled as lookup types
-        # when queries span relations.
-        try:
-            lookup_field = self.model._meta.get_field(parts[0])
-        except FieldDoesNotExist:
-            query_terms = self.query_terms
-        else:
-            # Do the import here to avoid a circular import.  If duck
-            # typing were used instead of an `isinstance` call, the import
-            # could be avoided.  I'm just not sure what test would be best for
-            # determining related-ness.
-            from django.db.models.fields.related import RelatedField
-            if isinstance(lookup_field, RelatedField):
-                query_terms = self.related_query_terms
-            else:
-                query_terms = self.query_terms
-
         # Work out the lookup type and remove it from 'parts', if necessary.
-        if len(parts) == 1 or parts[-1] not in query_terms:
+        if len(parts) == 1:
             lookup_type = 'exact'
         else:
-            lookup_type = parts.pop()
+            # Find the last field in the lookup and determine if it's a
+            # related field. By restricting the query terms used for lookups
+            # that span relations, we prevent valid field names like "year"
+            # from being misinterpreted as lookup types.
+            try:
+                lookup_model = self.model
+                for field_name in parts[:-1]:
+                    lookup_field = lookup_model._meta.get_field(field_name)
+                    if lookup_field.rel:
+                        lookup_model = lookup_field.rel.to
+            except FieldDoesNotExist:
+                query_terms = self.query_terms
+            else:
+                if lookup_field.rel:
+                    query_terms = self.related_query_terms
+                else:
+                    query_terms = self.query_terms
+            if parts[-1] in query_terms:
+                lookup_type = parts.pop()
+            else:
+                lookup_type = 'exact'
 
         # By default, this is a WHERE clause. If an aggregate is referenced
         # in the value, the filter will be promoted to a HAVING

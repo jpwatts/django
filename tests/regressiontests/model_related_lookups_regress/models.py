@@ -54,7 +54,7 @@ Regression test for #11670
 >>> hunter_pence.games.filter(season__year=2009).count()
 1
 
->>> hunter_pence.games.filter(season__year=2010).count()
+>>> hunter_pence.games.filter(season__year__exact=2010).count()
 2
 
 >>> pudge = Player.objects.create(name="Ivan Rodriquez")
@@ -69,7 +69,7 @@ Regression test for #11670
 >>> Player.objects.filter(games__season__year=2009).distinct().count()
 2
 
->>> Player.objects.filter(games__season__year=2010).distinct().count()
+>>> Player.objects.filter(games__season__year__exact=2010).distinct().count()
 2
 
 >>> Player.objects.filter(games__season__world_series_winner__icontains="Yankees").distinct().count()
